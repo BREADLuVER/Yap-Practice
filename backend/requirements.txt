@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+yt-dlp
+openai-whisper
+python-multipart
+ffmpeg-python
+torch
+numpy

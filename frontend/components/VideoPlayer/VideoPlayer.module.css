@@ -1,0 +1,10 @@
+.playerShell {
+  position: relative;
+  width: 100%;
+  max-width: 42rem;
+  margin: 0 auto 1.5rem;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+  aspect-ratio: 16 / 9;
+}
