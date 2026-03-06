@@ -10,3 +10,11 @@ export interface TranscriptData {
   words: Word[];
   full_text: string;
 }
+
+export interface VideoSummary {
+  video_id: string;
+  title: string;
+  thumbnailUrl: string;
+  duration: number;
+  createdAt: string;
+}

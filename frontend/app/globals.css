@@ -1,8 +1,26 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f4f6f8;
+  --foreground: #16181c;
+  --muted-text: #4e5866;
+  --card-bg: #ffffff;
+  --card-border: #d9dee6;
+  --panel-bg: #eef2f7;
+  --panel-border: #d4dce8;
+  --error-bg: #fff1f1;
+  --error-border: #ffcaca;
+  --error-text: #b42318;
+  --accent-color: #1db954;
+  --caption-bg: #f7f9fc;
+  --caption-control-bg: rgba(248, 250, 253, 0.95);
+  --caption-control-text: #222b36;
+  --caption-control-border: rgba(22, 24, 28, 0.2);
+  --caption-active-line: #0f1722;
+  --caption-near-line: rgba(15, 23, 34, 0.7);
+  --caption-far-line: rgba(15, 23, 34, 0.5);
+  --caption-distant-line: rgba(15, 23, 34, 0.35);
+  --caption-current-word-text: #08110b;
 }
 
 @theme inline {
@@ -12,10 +30,51 @@
   --font-mono: var(--font-geist-mono);
 }
 
+:root[data-theme="dark"] {
+  --background: #0f1217;
+  --foreground: #e8edf5;
+  --muted-text: #a6b0bf;
+  --card-bg: #161b23;
+  --card-border: #2a3340;
+  --panel-bg: #151a22;
+  --panel-border: #2a3340;
+  --error-bg: #2b1114;
+  --error-border: #5a1e25;
+  --error-text: #ffb4bb;
+  --accent-color: #23c75e;
+  --caption-bg: #11161d;
+  --caption-control-bg: rgba(15, 21, 30, 0.95);
+  --caption-control-text: rgba(232, 237, 245, 0.95);
+  --caption-control-border: rgba(232, 237, 245, 0.24);
+  --caption-active-line: #f8fafc;
+  --caption-near-line: rgba(248, 250, 252, 0.8);
+  --caption-far-line: rgba(248, 250, 252, 0.65);
+  --caption-distant-line: rgba(248, 250, 252, 0.5);
+  --caption-current-word-text: #08110b;
+}
+
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #0f1217;
+    --foreground: #e8edf5;
+    --muted-text: #a6b0bf;
+    --card-bg: #161b23;
+    --card-border: #2a3340;
+    --panel-bg: #151a22;
+    --panel-border: #2a3340;
+    --error-bg: #2b1114;
+    --error-border: #5a1e25;
+    --error-text: #ffb4bb;
+    --accent-color: #23c75e;
+    --caption-bg: #11161d;
+    --caption-control-bg: rgba(15, 21, 30, 0.95);
+    --caption-control-text: rgba(232, 237, 245, 0.95);
+    --caption-control-border: rgba(232, 237, 245, 0.24);
+    --caption-active-line: #f8fafc;
+    --caption-near-line: rgba(248, 250, 252, 0.8);
+    --caption-far-line: rgba(248, 250, 252, 0.65);
+    --caption-distant-line: rgba(248, 250, 252, 0.5);
+    --caption-current-word-text: #08110b;
   }
 }
 

@@ -1,11 +1,12 @@
 .captionPanel {
   position: relative;
   width: 100%;
-  max-width: 42rem;
-  height: 20rem;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  max-width: none;
+  height: 100%;
+  min-height: 20rem;
+  border: 1px solid var(--card-border);
   border-radius: 1rem;
-  background: #121212;
+  background: var(--caption-bg);
   padding: 1.5rem;
   overflow-y: auto;
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
@@ -39,9 +40,9 @@
   align-items: center;
   gap: 0.35rem;
   padding: 0.2rem;
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  border: 1px solid var(--caption-control-border);
   border-radius: 999px;
-  background: rgba(18, 18, 18, 0.9);
+  background: var(--caption-control-bg);
   backdrop-filter: blur(2px);
 }
 
@@ -50,7 +51,7 @@
   border-radius: 999px;
   padding: 0.2rem 0.5rem;
   background: transparent;
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--caption-control-text);
   font-size: 0.78rem;
   font-weight: 500;
   line-height: 1;
@@ -59,25 +60,25 @@
 }
 
 .speedButton:hover {
-  color: rgba(255, 255, 255, 0.95);
+  color: var(--foreground);
 }
 
 .speedButton:focus-visible {
-  outline: 2px solid #1db954;
+  outline: 2px solid var(--accent-color);
   outline-offset: 1px;
 }
 
 .speedButtonActive {
-  background: rgba(29, 185, 84, 0.92);
+  background: color-mix(in srgb, var(--accent-color) 92%, transparent);
   color: #08110b;
 }
 
 .playPauseButton {
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid var(--caption-control-border);
   border-radius: 999px;
   padding: 0.26rem 0.72rem;
-  background: rgba(18, 18, 18, 0.9);
-  color: rgba(255, 255, 255, 0.9);
+  background: var(--caption-control-bg);
+  color: var(--caption-control-text);
   font-size: 0.78rem;
   font-weight: 500;
   cursor: pointer;
@@ -85,12 +86,12 @@
 }
 
 .playPauseButton:hover {
-  border-color: rgba(29, 185, 84, 0.65);
-  color: #ffffff;
+  border-color: color-mix(in srgb, var(--accent-color) 65%, transparent);
+  color: var(--foreground);
 }
 
 .playPauseButton:focus-visible {
-  outline: 2px solid #1db954;
+  outline: 2px solid var(--accent-color);
   outline-offset: 1px;
 }
 
@@ -105,22 +106,22 @@
 }
 
 .lineActive {
-  color: #ffffff;
+  color: var(--caption-active-line);
   opacity: 0.98;
 }
 
 .lineNear {
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--caption-near-line);
   opacity: 0.55;
 }
 
 .lineFar {
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--caption-far-line);
   opacity: 0.38;
 }
 
 .lineDistant {
-  color: rgba(255, 255, 255, 0.65);
+  color: var(--caption-distant-line);
   opacity: 0.28;
 }
 
@@ -133,8 +134,8 @@
 }
 
 .wordCurrent {
-  background: rgba(29, 185, 84, 0.72);
-  color: #08110b;
+  background: color-mix(in srgb, var(--accent-color) 72%, transparent);
+  color: var(--caption-current-word-text);
 }
 
 @media (min-width: 768px) {

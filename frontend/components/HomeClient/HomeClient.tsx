@@ -1,55 +1,45 @@
 'use client';
 
-import { useState } from 'react';
-import dynamic from 'next/dynamic';
+import { useState, useEffect } from 'react';
 import axios from 'axios';
-import ClipInput from '@/components/ClipInput/ClipInput';
-import TranscriptDisplay from '@/components/TranscriptDisplay/TranscriptDisplay';
-import { TranscriptData } from '@/types';
+import Link from 'next/link';
+import { VideoSummary } from '@/types';
+import { getApiBaseUrl, getApiErrorMessage } from '@/lib/api';
 import styles from './HomeClient.module.css';
 
-const VideoPlayer = dynamic(() => import('@/components/VideoPlayer/VideoPlayer'), { ssr: false });
-type PlaybackRate = 0.5 | 0.75 | 1;
-const API_BASE_URL = (process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8000').replace(/\/$/, '');
+const API_BASE_URL = getApiBaseUrl();
 
 export default function HomeClient() {
-  const [videoUrl, setVideoUrl] = useState<string | null>(null);
-  const [transcript, setTranscript] = useState<TranscriptData | null>(null);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [playbackRate, setPlaybackRate] = useState<PlaybackRate>(1);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [videos, setVideos] = useState<VideoSummary[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const handleUrlSubmit = async (url: string) => {
-    setIsLoading(true);
-    setError(null);
-    setVideoUrl(null);
-    setTranscript(null);
-    setCurrentTime(0);
-    setIsPlaying(false);
-
-    try {
-      const response = await axios.post(`${API_BASE_URL}/api/process`, { url });
-      setTranscript(response.data);
-      setVideoUrl(url);
-    } catch (err: unknown) {
-      console.error(err);
-      if (axios.isAxiosError(err)) {
-        setError(err.response?.data?.detail || 'Failed to process video. Please try again.');
-      } else {
-        setError('Failed to process video. Please try again.');
+  useEffect(() => {
+    const fetchVideos = async () => {
+      try {
+        const response = await axios.get(`${API_BASE_URL}/api/videos`);
+        setVideos(response.data);
+      } catch (err: unknown) {
+        console.error(err);
+        if (axios.isAxiosError(err) && err.message === 'Network Error') {
+          setError(getApiErrorMessage('Unable to reach the API server. Confirm backend URL and CORS settings.'));
+        } else {
+          setError('Failed to load videos. Please try again later.');
+        }
+      } finally {
+        setIsLoading(false);
       }
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    };
+
+    fetchVideos();
+  }, []);
 
   return (
     <main className={styles.page}>
-      <h1 className={styles.pageTitle}>NorthernLingo</h1>
-
-      <ClipInput onUrlSubmit={handleUrlSubmit} isLoading={isLoading} />
+      <header className={styles.header}>
+        <h1 className={styles.pageTitle}>NorthernLingo</h1>
+        <p className={styles.subtitle}>Select a clip to start practicing</p>
+      </header>
 
       {error && (
         <div className={styles.errorBanner} role="alert">
@@ -58,25 +48,34 @@ export default function HomeClient() {
         </div>
       )}
 
-      {videoUrl && transcript && (
-        <section className={styles.playerSection}>
-          <h2 className={styles.videoTitle}>{transcript.title}</h2>
-          <VideoPlayer
-            url={videoUrl}
-            onProgress={setCurrentTime}
-            playbackRate={playbackRate}
-            isPlaying={isPlaying}
-            onPlayStateChange={setIsPlaying}
-          />
-          <TranscriptDisplay
-            words={transcript.words}
-            currentTime={currentTime}
-            playbackRate={playbackRate}
-            onPlaybackRateChange={setPlaybackRate}
-            isPlaying={isPlaying}
-            onPlayPauseToggle={() => setIsPlaying((previous) => !previous)}
-          />
-        </section>
+      {isLoading ? (
+        <div className={styles.loading}>Loading library...</div>
+      ) : (
+        <div className={styles.videoGrid}>
+          {videos.map((video) => (
+            <Link key={video.video_id} href={`/practice/${video.video_id}`} className={styles.videoCard}>
+              <div className={styles.thumbnailWrapper}>
+                <img 
+                  src={video.thumbnailUrl || `https://img.youtube.com/vi/${video.video_id}/mqdefault.jpg`} 
+                  alt={video.title} 
+                  className={styles.thumbnail}
+                />
+                <span className={styles.duration}>
+                  {Math.floor(video.duration / 60)}:{String(video.duration % 60).padStart(2, '0')}
+                </span>
+              </div>
+              <div className={styles.cardContent}>
+                <h3 className={styles.cardTitle}>{video.title}</h3>
+              </div>
+            </Link>
+          ))}
+          
+          {videos.length === 0 && !error && (
+            <div className={styles.emptyState}>
+              No videos found. Run the ingestion script to add some!
+            </div>
+          )}
+        </div>
       )}
     </main>
   );
