@@ -31,10 +31,18 @@ def get_allowed_origins() -> list[str]:
         return [origin.strip() for origin in origins.split(",") if origin.strip()]
     return ["http://localhost:3000"]
 
+
+def get_allowed_origin_regex() -> str | None:
+    regex = os.getenv("ALLOWED_ORIGIN_REGEX", "").strip()
+    if regex:
+        return regex
+    return None
+
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=get_allowed_origins(),
+    allow_origin_regex=get_allowed_origin_regex(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -61,8 +69,7 @@ def read_root():
 def list_videos():
     """List all available videos from Firestore."""
     try:
-        videos_ref = db.collection("videos")
-        docs = videos_ref.stream()
+        docs = db.collection("videos").stream()
         videos = []
         for doc in docs:
             data = doc.to_dict()
@@ -72,8 +79,17 @@ def list_videos():
                 "title": data.get("title"),
                 "thumbnailUrl": data.get("thumbnailUrl"),
                 "duration": data.get("duration"),
-                "createdAt": data.get("createdAt")
+                "createdAt": data.get("createdAt"),
+                "viewCount": data.get("viewCount", 0),
             })
+
+        videos.sort(
+            key=lambda video: (
+                int(video.get("viewCount") or 0),
+                str(video.get("createdAt") or ""),
+            ),
+            reverse=True,
+        )
         return videos
     except Exception as e:
         print(f"Error listing videos: {e}")

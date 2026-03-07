@@ -8,6 +8,23 @@ import { getApiBaseUrl, getApiErrorMessage } from '@/lib/api';
 import styles from './HomeClient.module.css';
 
 const API_BASE_URL = getApiBaseUrl();
+const getYouTubeThumbnailUrl = (videoId: string) => `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
+
+const getNormalizedThumbnailUrl = (video: VideoSummary) => {
+  if (!video.thumbnailUrl) {
+    return getYouTubeThumbnailUrl(video.video_id);
+  }
+
+  try {
+    const parsedUrl = new URL(video.thumbnailUrl);
+    if (parsedUrl.hostname.includes('ytimg.com')) {
+      return getYouTubeThumbnailUrl(video.video_id);
+    }
+    return video.thumbnailUrl;
+  } catch {
+    return getYouTubeThumbnailUrl(video.video_id);
+  }
+};
 
 export default function HomeClient() {
   const [videos, setVideos] = useState<VideoSummary[]>([]);
@@ -55,10 +72,18 @@ export default function HomeClient() {
           {videos.map((video) => (
             <Link key={video.video_id} href={`/practice/${video.video_id}`} className={styles.videoCard}>
               <div className={styles.thumbnailWrapper}>
-                <img 
-                  src={video.thumbnailUrl || `https://img.youtube.com/vi/${video.video_id}/mqdefault.jpg`} 
-                  alt={video.title} 
+                <img
+                  src={getNormalizedThumbnailUrl(video)}
+                  alt={video.title}
                   className={styles.thumbnail}
+                  onError={(event) => {
+                    const image = event.currentTarget;
+                    if (image.dataset.fallbackApplied === 'true') {
+                      return;
+                    }
+                    image.dataset.fallbackApplied = 'true';
+                    image.src = `https://img.youtube.com/vi/${video.video_id}/mqdefault.jpg`;
+                  }}
                 />
                 <span className={styles.duration}>
                   {Math.floor(video.duration / 60)}:{String(video.duration % 60).padStart(2, '0')}

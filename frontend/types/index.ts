@@ -17,4 +17,5 @@ export interface VideoSummary {
   thumbnailUrl: string;
   duration: number;
   createdAt: string;
+  viewCount?: number;
 }
