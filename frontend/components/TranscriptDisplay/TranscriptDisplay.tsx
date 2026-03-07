@@ -14,6 +14,11 @@ interface TranscriptDisplayProps {
   onPlaybackRateChange: (rate: 0.5 | 0.75 | 1) => void;
   isPlaying: boolean;
   onPlayPauseToggle: () => void;
+  isPracticed: boolean;
+  isPracticedUpdating: boolean;
+  isPracticedDisabled: boolean;
+  onPracticedToggle: () => void;
+  practicedHint?: string;
 }
 
 interface TranscriptLine {
@@ -119,6 +124,11 @@ const TranscriptDisplay: React.FC<TranscriptDisplayProps> = ({
   onPlaybackRateChange,
   isPlaying,
   onPlayPauseToggle,
+  isPracticed,
+  isPracticedUpdating,
+  isPracticedDisabled,
+  onPracticedToggle,
+  practicedHint,
 }) => {
   const activeLineRef = useRef<HTMLParagraphElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -232,6 +242,23 @@ const TranscriptDisplay: React.FC<TranscriptDisplayProps> = ({
             </p>
           );
         })}
+      </div>
+      <div className={styles.practicedDock}>
+        {practicedHint ? <p className={styles.practicedHint}>{practicedHint}</p> : null}
+        <button
+          type="button"
+          className={`${styles.practicedButton} ${isPracticed ? styles.practicedButtonActive : ''}`}
+          aria-pressed={isPracticed}
+          aria-label={
+            isPracticed
+              ? 'Marked as practiced. Click to unmark.'
+              : 'Mark this clip as practiced.'
+          }
+          onClick={onPracticedToggle}
+          disabled={isPracticedDisabled || isPracticedUpdating}
+        >
+          {isPracticedUpdating ? '...' : '✓'}
+        </button>
       </div>
     </div>
   );

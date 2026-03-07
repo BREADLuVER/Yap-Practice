@@ -4,3 +4,4 @@ DEPLOYMENT.md
 backend/serviceAccountKey.json
 backend/.env
 backend/.env.local
+serviceAccountKey.json

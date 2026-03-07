@@ -1,14 +1,22 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import Link from 'next/link';
+import Image from 'next/image';
 import { VideoSummary } from '@/types';
 import { getApiBaseUrl, getApiErrorMessage } from '@/lib/api';
+import { useAuthUser } from '@/lib/auth/useAuthUser';
+import {
+  PracticedAuthRequiredError,
+  fetchPracticedVideoIds,
+  setPracticedVideo,
+} from '@/lib/practiced/api';
 import styles from './HomeClient.module.css';
 
 const API_BASE_URL = getApiBaseUrl();
 const getYouTubeThumbnailUrl = (videoId: string) => `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
+type PracticedFilter = 'all' | 'practiced' | 'unpracticed';
 
 const getNormalizedThumbnailUrl = (video: VideoSummary) => {
   if (!video.thumbnailUrl) {
@@ -27,7 +35,12 @@ const getNormalizedThumbnailUrl = (video: VideoSummary) => {
 };
 
 export default function HomeClient() {
+  const { user, isLoading: isAuthLoading } = useAuthUser();
   const [videos, setVideos] = useState<VideoSummary[]>([]);
+  const [practicedVideoIds, setPracticedVideoIds] = useState<Set<string>>(new Set());
+  const [updatingVideoIds, setUpdatingVideoIds] = useState<Set<string>>(new Set());
+  const [fallbackThumbnailVideoIds, setFallbackThumbnailVideoIds] = useState<Set<string>>(new Set());
+  const [activeFilter, setActiveFilter] = useState<PracticedFilter>('all');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -51,11 +64,132 @@ export default function HomeClient() {
     fetchVideos();
   }, []);
 
+  useEffect(() => {
+    let isCancelled = false;
+
+    const fetchPracticed = async () => {
+      if (isAuthLoading) {
+        return;
+      }
+
+      if (!user || videos.length === 0) {
+        setPracticedVideoIds(new Set());
+        return;
+      }
+
+      try {
+        const practiced = await fetchPracticedVideoIds(videos.map((video) => video.video_id));
+        if (!isCancelled) {
+          setPracticedVideoIds(practiced);
+        }
+      } catch (err) {
+        if (!isCancelled) {
+          console.error(err);
+          setError('Failed to load practiced-state. Please try refreshing.');
+        }
+      }
+    };
+
+    fetchPracticed();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [isAuthLoading, user, videos]);
+
+  const filteredVideos = useMemo(() => {
+    if (activeFilter === 'all') {
+      return videos;
+    }
+
+    return videos.filter((video) => {
+      const isPracticed = practicedVideoIds.has(video.video_id);
+      if (activeFilter === 'practiced') {
+        return isPracticed;
+      }
+      return !isPracticed;
+    });
+  }, [activeFilter, practicedVideoIds, videos]);
+
+  const handlePracticedToggle = async (videoId: string) => {
+    if (!user || updatingVideoIds.has(videoId)) {
+      return;
+    }
+
+    const nextPracticed = !practicedVideoIds.has(videoId);
+
+    setUpdatingVideoIds((previous) => new Set([...previous, videoId]));
+    setPracticedVideoIds((previous) => {
+      const next = new Set(previous);
+      if (nextPracticed) {
+        next.add(videoId);
+      } else {
+        next.delete(videoId);
+      }
+      return next;
+    });
+
+    try {
+      await setPracticedVideo(videoId, nextPracticed);
+    } catch (err) {
+      setPracticedVideoIds((previous) => {
+        const next = new Set(previous);
+        if (nextPracticed) {
+          next.delete(videoId);
+        } else {
+          next.add(videoId);
+        }
+        return next;
+      });
+
+      if (err instanceof PracticedAuthRequiredError) {
+        setError('Please log in to mark clips as practiced.');
+      } else {
+        setError('Failed to update practiced-state. Please try again.');
+      }
+    } finally {
+      setUpdatingVideoIds((previous) => {
+        const next = new Set(previous);
+        next.delete(videoId);
+        return next;
+      });
+    }
+  };
+
   return (
     <main className={styles.page}>
       <header className={styles.header}>
         <h1 className={styles.pageTitle}>NorthernLingo</h1>
         <p className={styles.subtitle}>Select a clip to start practicing</p>
+        <div className={styles.filterRow} role="group" aria-label="Practice filters">
+          <button
+            type="button"
+            className={`${styles.filterButton} ${activeFilter === 'all' ? styles.filterButtonActive : ''}`}
+            aria-pressed={activeFilter === 'all'}
+            onClick={() => setActiveFilter('all')}
+          >
+            All
+          </button>
+          <button
+            type="button"
+            className={`${styles.filterButton} ${activeFilter === 'practiced' ? styles.filterButtonActive : ''}`}
+            aria-pressed={activeFilter === 'practiced'}
+            onClick={() => setActiveFilter('practiced')}
+          >
+            Practiced
+          </button>
+          <button
+            type="button"
+            className={`${styles.filterButton} ${activeFilter === 'unpracticed' ? styles.filterButtonActive : ''}`}
+            aria-pressed={activeFilter === 'unpracticed'}
+            onClick={() => setActiveFilter('unpracticed')}
+          >
+            Unpracticed
+          </button>
+        </div>
+        {!isAuthLoading && !user && (
+          <p className={styles.authPrompt}>Log in with Google to save practiced clips.</p>
+        )}
       </header>
 
       {error && (
@@ -69,35 +203,68 @@ export default function HomeClient() {
         <div className={styles.loading}>Loading library...</div>
       ) : (
         <div className={styles.videoGrid}>
-          {videos.map((video) => (
-            <Link key={video.video_id} href={`/practice/${video.video_id}`} className={styles.videoCard}>
+          {filteredVideos.map((video) => (
+            <article key={video.video_id} className={styles.videoCard}>
               <div className={styles.thumbnailWrapper}>
-                <img
-                  src={getNormalizedThumbnailUrl(video)}
-                  alt={video.title}
-                  className={styles.thumbnail}
-                  onError={(event) => {
-                    const image = event.currentTarget;
-                    if (image.dataset.fallbackApplied === 'true') {
-                      return;
+                <button
+                  type="button"
+                  className={`${styles.practicedToggle} ${practicedVideoIds.has(video.video_id) ? styles.practicedToggleActive : ''}`}
+                  aria-pressed={practicedVideoIds.has(video.video_id)}
+                  aria-label={
+                    practicedVideoIds.has(video.video_id)
+                      ? 'Marked as practiced. Click to unmark.'
+                      : 'Mark clip as practiced.'
+                  }
+                  onClick={() => handlePracticedToggle(video.video_id)}
+                  disabled={!user || isAuthLoading || updatingVideoIds.has(video.video_id)}
+                >
+                  {updatingVideoIds.has(video.video_id) ? '...' : '✓'}
+                </button>
+                <Link
+                  href={`/practice/${video.video_id}`}
+                  className={styles.thumbnailLink}
+                  aria-label={`Open practice clip: ${video.title}`}
+                >
+                  <Image
+                    src={
+                      fallbackThumbnailVideoIds.has(video.video_id)
+                        ? `https://img.youtube.com/vi/${video.video_id}/mqdefault.jpg`
+                        : getNormalizedThumbnailUrl(video)
                     }
-                    image.dataset.fallbackApplied = 'true';
-                    image.src = `https://img.youtube.com/vi/${video.video_id}/mqdefault.jpg`;
-                  }}
-                />
+                    alt={video.title}
+                    fill
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                    className={styles.thumbnail}
+                    onError={() => {
+                      setFallbackThumbnailVideoIds((previous) => {
+                        if (previous.has(video.video_id)) {
+                          return previous;
+                        }
+
+                        return new Set([...previous, video.video_id]);
+                      });
+                    }}
+                  />
+                </Link>
                 <span className={styles.duration}>
                   {Math.floor(video.duration / 60)}:{String(video.duration % 60).padStart(2, '0')}
                 </span>
               </div>
-              <div className={styles.cardContent}>
+              <Link
+                href={`/practice/${video.video_id}`}
+                className={styles.cardContent}
+                aria-label={`Practice ${video.title}`}
+              >
                 <h3 className={styles.cardTitle}>{video.title}</h3>
-              </div>
-            </Link>
+              </Link>
+            </article>
           ))}
           
-          {videos.length === 0 && !error && (
+          {filteredVideos.length === 0 && !error && (
             <div className={styles.emptyState}>
-              No videos found. Run the ingestion script to add some!
+              {videos.length === 0
+                ? 'No videos found. Run the ingestion script to add some!'
+                : 'No clips match the selected filter yet.'}
             </div>
           )}
         </div>

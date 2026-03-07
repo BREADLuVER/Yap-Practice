@@ -6,6 +6,12 @@ import axios from 'axios';
 import TranscriptDisplay from '@/components/TranscriptDisplay/TranscriptDisplay';
 import { TranscriptData } from '@/types';
 import { getApiBaseUrl, getApiErrorMessage } from '@/lib/api';
+import { useAuthUser } from '@/lib/auth/useAuthUser';
+import {
+  PracticedAuthRequiredError,
+  fetchPracticedVideoIds,
+  setPracticedVideo,
+} from '@/lib/practiced/api';
 import styles from './PracticeClient.module.css';
 import Link from 'next/link';
 
@@ -18,12 +24,16 @@ interface PracticeClientProps {
 }
 
 export default function PracticeClient({ videoId }: PracticeClientProps) {
+  const { user, isLoading: isAuthLoading } = useAuthUser();
   const [transcript, setTranscript] = useState<TranscriptData | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [playbackRate, setPlaybackRate] = useState<PlaybackRate>(1);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isPracticed, setIsPracticed] = useState(false);
+  const [isPracticedUpdating, setIsPracticedUpdating] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [practicedError, setPracticedError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchVideo = async () => {
@@ -44,6 +54,65 @@ export default function PracticeClient({ videoId }: PracticeClientProps) {
 
     fetchVideo();
   }, [videoId]);
+
+  useEffect(() => {
+    let isCancelled = false;
+
+    const fetchPracticedState = async () => {
+      if (isAuthLoading) {
+        return;
+      }
+
+      if (!user) {
+        setIsPracticed(false);
+        setPracticedError(null);
+        return;
+      }
+
+      try {
+        const practicedIds = await fetchPracticedVideoIds([videoId]);
+        if (!isCancelled) {
+          setIsPracticed(practicedIds.has(videoId));
+          setPracticedError(null);
+        }
+      } catch (err) {
+        if (!isCancelled) {
+          console.error(err);
+          setPracticedError('Failed to load practiced-state.');
+        }
+      }
+    };
+
+    fetchPracticedState();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [isAuthLoading, user, videoId]);
+
+  const handlePracticedToggle = async () => {
+    if (!user || isPracticedUpdating) {
+      return;
+    }
+
+    const nextPracticed = !isPracticed;
+    setIsPracticed(nextPracticed);
+    setIsPracticedUpdating(true);
+    setPracticedError(null);
+
+    try {
+      await setPracticedVideo(videoId, nextPracticed);
+    } catch (err) {
+      setIsPracticed(!nextPracticed);
+      if (err instanceof PracticedAuthRequiredError) {
+        setPracticedError('Please log in to mark this clip as practiced.');
+      } else {
+        setPracticedError('Failed to update practiced-state. Please try again.');
+      }
+    } finally {
+      setIsPracticedUpdating(false);
+    }
+  };
 
   if (isLoading) {
     return <div className={styles.loading}>Loading video...</div>;
@@ -85,6 +154,14 @@ export default function PracticeClient({ videoId }: PracticeClientProps) {
             onPlaybackRateChange={setPlaybackRate}
             isPlaying={isPlaying}
             onPlayPauseToggle={() => setIsPlaying((previous) => !previous)}
+            isPracticed={isPracticed}
+            isPracticedUpdating={isPracticedUpdating}
+            isPracticedDisabled={!user || isAuthLoading}
+            onPracticedToggle={handlePracticedToggle}
+            practicedHint={
+              practicedError ??
+              (!isAuthLoading && !user ? 'Log in to mark this clip as practiced.' : undefined)
+            }
           />
         </div>
       </section>

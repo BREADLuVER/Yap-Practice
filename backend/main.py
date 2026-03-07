@@ -10,7 +10,7 @@ import yt_dlp
 import whisper
 import uvicorn
 import firebase_admin
-from firebase_admin import credentials, firestore
+from firebase_admin import auth, credentials, firestore
 
 app = FastAPI()
 
@@ -61,6 +61,32 @@ def get_model():
 class VideoRequest(BaseModel):
     url: str
 
+
+class PracticedUpdateRequest(BaseModel):
+    practiced: bool
+
+
+def get_authenticated_uid(request: Request) -> str:
+    authorization_header = request.headers.get("Authorization", "").strip()
+    if not authorization_header.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Missing or invalid authorization header")
+
+    id_token = authorization_header.removeprefix("Bearer ").strip()
+    if not id_token:
+        raise HTTPException(status_code=401, detail="Missing Firebase ID token")
+
+    try:
+        decoded_token = auth.verify_id_token(id_token)
+    except Exception as error:
+        print(f"Invalid Firebase token: {error}")
+        raise HTTPException(status_code=401, detail="Invalid or expired Firebase ID token") from error
+
+    uid = str(decoded_token.get("uid", "")).strip()
+    if not uid:
+        raise HTTPException(status_code=401, detail="Authenticated token did not include a user id")
+
+    return uid
+
 @app.get("/")
 def read_root():
     return {"message": "NorthernLingo Backend is running!"}
@@ -109,6 +135,78 @@ def get_video(video_id: str):
     except Exception as e:
         print(f"Error getting video {video_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/users/me/practiced")
+def get_practiced_videos(request: Request, videoIds: str | None = None):
+    uid = get_authenticated_uid(request)
+    progress_collection = db.collection("users").document(uid).collection("clip_progress")
+
+    try:
+        requested_video_ids: list[str] = []
+        if videoIds:
+            requested_video_ids = [
+                video_id.strip()
+                for video_id in videoIds.split(",")
+                if video_id.strip()
+            ]
+            requested_video_ids = list(dict.fromkeys(requested_video_ids))
+
+        practiced_video_ids: list[str] = []
+        if requested_video_ids:
+            for video_id in requested_video_ids:
+                progress_doc = progress_collection.document(video_id).get()
+                if not progress_doc.exists:
+                    continue
+
+                progress_data = progress_doc.to_dict() or {}
+                if bool(progress_data.get("practiced")):
+                    practiced_video_ids.append(video_id)
+        else:
+            for progress_doc in progress_collection.stream():
+                progress_data = progress_doc.to_dict() or {}
+                if bool(progress_data.get("practiced")):
+                    practiced_video_ids.append(progress_doc.id)
+
+        return {"practiced": practiced_video_ids}
+    except HTTPException:
+        raise
+    except Exception as error:
+        print(f"Error fetching practiced videos for user {uid}: {error}")
+        raise HTTPException(status_code=500, detail="Unable to fetch practiced videos") from error
+
+
+@app.put("/api/users/me/practiced/{video_id}")
+def update_practiced_video(video_id: str, payload: PracticedUpdateRequest, request: Request):
+    normalized_video_id = video_id.strip()
+    if not normalized_video_id:
+        raise HTTPException(status_code=400, detail="video_id is required")
+
+    uid = get_authenticated_uid(request)
+    progress_doc_ref = (
+        db.collection("users")
+        .document(uid)
+        .collection("clip_progress")
+        .document(normalized_video_id)
+    )
+
+    try:
+        if payload.practiced:
+            progress_doc_ref.set(
+                {
+                    "video_id": normalized_video_id,
+                    "practiced": True,
+                    "updatedAt": firestore.SERVER_TIMESTAMP,
+                },
+                merge=True,
+            )
+        else:
+            progress_doc_ref.delete()
+
+        return {"video_id": normalized_video_id, "practiced": payload.practiced}
+    except Exception as error:
+        print(f"Error updating practiced state for user {uid}, video {normalized_video_id}: {error}")
+        raise HTTPException(status_code=500, detail="Unable to update practiced state") from error
 
 def check_ffmpeg():
     if not shutil.which("ffmpeg"):

@@ -25,6 +25,49 @@
   margin-top: 0.5rem;
 }
 
+.filterRow {
+  margin-top: 1rem;
+  display: inline-flex;
+  gap: 0.4rem;
+  padding: 0.2rem;
+  border: 1px solid var(--caption-control-border);
+  border-radius: 999px;
+  background: var(--caption-control-bg);
+}
+
+.filterButton {
+  border: none;
+  border-radius: 999px;
+  padding: 0.32rem 0.72rem;
+  background: transparent;
+  color: var(--caption-control-text);
+  font-size: 0.84rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 160ms ease, color 160ms ease;
+}
+
+.filterButton:hover {
+  color: var(--foreground);
+}
+
+.filterButton:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 1px;
+}
+
+.filterButtonActive {
+  background: color-mix(in srgb, var(--accent-color) 92%, transparent);
+  color: #08110b;
+}
+
+.authPrompt {
+  margin-top: 0.6rem;
+  margin-bottom: 0;
+  font-size: 0.9rem;
+  color: var(--muted-text);
+}
+
 .videoGrid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -35,8 +78,6 @@
   border: 1px solid var(--card-border);
   border-radius: 0.5rem;
   overflow: hidden;
-  text-decoration: none;
-  color: inherit;
   transition: transform 0.2s, box-shadow 0.2s;
   background: var(--card-bg);
   display: flex;
@@ -52,6 +93,13 @@
   position: relative;
   aspect-ratio: 16 / 9;
   background: var(--panel-bg);
+}
+
+.thumbnailLink {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 .thumbnail {
@@ -74,6 +122,8 @@
 
 .cardContent {
   padding: 1rem;
+  text-decoration: none;
+  color: inherit;
   height: 4.8rem;
 }
 
@@ -82,10 +132,50 @@
   font-weight: 600;
   margin: 0;
   line-height: 1.4;
+  line-clamp: 2;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+.practicedToggle {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  z-index: 2;
+  border: 1px solid var(--caption-control-border);
+  border-radius: 999px;
+  min-width: 2.1rem;
+  padding: 0.24rem 0.5rem;
+  background: var(--caption-control-bg);
+  color: var(--caption-control-text);
+  font-size: 0.82rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  transition: border-color 160ms ease, color 160ms ease, background-color 160ms ease, opacity 160ms ease;
+}
+
+.practicedToggle:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--accent-color) 65%, transparent);
+  color: var(--foreground);
+}
+
+.practicedToggle:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 1px;
+}
+
+.practicedToggleActive {
+  border-color: color-mix(in srgb, var(--accent-color) 65%, transparent);
+  background: color-mix(in srgb, var(--accent-color) 92%, transparent);
+  color: #08110b;
+}
+
+.practicedToggle:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
 }
 
 .loading, .errorBanner, .emptyState {

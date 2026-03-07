@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import styles from './ThemeToggle.module.css';
 
 type Theme = 'light' | 'dark';
@@ -21,35 +21,28 @@ const getInitialTheme = (): Theme => {
 };
 
 export default function ThemeToggle() {
-  const [theme, setTheme] = useState<Theme>('light');
-  const [isReady, setIsReady] = useState(false);
-
   useEffect(() => {
     const initialTheme = getInitialTheme();
-    setTheme(initialTheme);
     applyTheme(initialTheme);
-    setIsReady(true);
+    window.localStorage.setItem(STORAGE_KEY, initialTheme);
   }, []);
 
   const handleToggleTheme = () => {
-    const nextTheme: Theme = theme === 'light' ? 'dark' : 'light';
-    setTheme(nextTheme);
-    window.localStorage.setItem(STORAGE_KEY, nextTheme);
+    const currentTheme =
+      document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+    const nextTheme: Theme = currentTheme === 'light' ? 'dark' : 'light';
     applyTheme(nextTheme);
+    window.localStorage.setItem(STORAGE_KEY, nextTheme);
   };
-
-  if (!isReady) {
-    return null;
-  }
 
   return (
     <button
       type="button"
       className={styles.toggleButton}
-      aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
+      aria-label="Toggle theme"
       onClick={handleToggleTheme}
     >
-      {theme === 'light' ? 'Dark mode' : 'Light mode'}
+      Theme
     </button>
   );
 }
