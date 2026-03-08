@@ -7,6 +7,7 @@ import {
   signInWithRedirect,
   signOut,
 } from 'firebase/auth';
+import { FirebaseError } from 'firebase/app';
 import { getFirebaseAuth, getFirebaseInitError } from '@/lib/firebase/client';
 
 const googleProvider = new GoogleAuthProvider();
@@ -30,7 +31,25 @@ const shouldUseRedirectFlow = (): boolean => {
   if (typeof navigator === 'undefined') {
     return false;
   }
-  return /iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+  const userAgent = navigator.userAgent;
+  const isClassicIos = /iPhone|iPad|iPod/i.test(userAgent);
+  // iPadOS can identify itself as Macintosh while still requiring iOS-safe auth flow.
+  const isTouchMac = /Macintosh/i.test(userAgent) && navigator.maxTouchPoints > 1;
+
+  return isClassicIos || isTouchMac;
+};
+
+const shouldFallbackToRedirect = (error: unknown): boolean => {
+  if (!(error instanceof FirebaseError)) {
+    return false;
+  }
+
+  return (
+    error.code === 'auth/popup-blocked' ||
+    error.code === 'auth/cancelled-popup-request' ||
+    error.code === 'auth/operation-not-supported-in-this-environment'
+  );
 };
 
 export const signInWithGoogle = async (): Promise<void> => {
@@ -39,7 +58,16 @@ export const signInWithGoogle = async (): Promise<void> => {
     await signInWithRedirect(auth, googleProvider);
     return;
   }
-  await signInWithPopup(auth, googleProvider);
+
+  try {
+    await signInWithPopup(auth, googleProvider);
+  } catch (error) {
+    if (!shouldFallbackToRedirect(error)) {
+      throw error;
+    }
+
+    await signInWithRedirect(auth, googleProvider);
+  }
 };
 
 export const signOutUser = async (): Promise<void> => {
