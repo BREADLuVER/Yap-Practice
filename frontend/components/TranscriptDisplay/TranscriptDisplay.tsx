@@ -207,6 +207,7 @@ const TranscriptDisplay: React.FC<TranscriptDisplayProps> = ({
       aria-label="Timed transcript"
     >
       <div className={styles.controlDock}>
+        <div className={styles.controlDockLeft}>
         <button
           type="button"
           className={styles.playPauseButton}
@@ -215,21 +216,8 @@ const TranscriptDisplay: React.FC<TranscriptDisplayProps> = ({
         >
           {isPlaying ? 'Pause' : 'Play'}
         </button>
+        </div>
         <div className={styles.controlDockRight}>
-          <button
-            type="button"
-            className={`${styles.practicedButton} ${isPracticed ? styles.practicedButtonActive : ''}`}
-            aria-pressed={isPracticed}
-            aria-label={
-              isPracticed
-                ? 'Marked as practiced. Click to unmark.'
-                : 'Mark this clip as practiced.'
-            }
-            onClick={onPracticedToggle}
-            disabled={isPracticedDisabled || isPracticedUpdating}
-          >
-            {isPracticedUpdating ? '...' : '✓'}
-          </button>
           <div className={styles.speedControl} aria-label="Playback speed control">
             {SPEED_OPTIONS.map((speed) => {
               const isActiveSpeed = playbackRate === speed;
@@ -305,7 +293,23 @@ const TranscriptDisplay: React.FC<TranscriptDisplayProps> = ({
           );
         })}
       </div>
-      {practicedHint ? <p className={styles.practicedHint}>{practicedHint}</p> : null}
+      <div className={styles.practicedDock}>
+        {practicedHint ? <p className={styles.practicedHint}>{practicedHint}</p> : null}
+        <button
+          type="button"
+          className={`${styles.practicedButton} ${isPracticed ? styles.practicedButtonActive : ''}`}
+          aria-pressed={isPracticed}
+          aria-label={
+            isPracticed
+              ? 'Marked as practiced. Click to unmark.'
+              : 'Mark this clip as practiced.'
+          }
+          onClick={onPracticedToggle}
+          disabled={isPracticedDisabled || isPracticedUpdating}
+        >
+          {isPracticedUpdating ? '...' : '✓'}
+        </button>
+      </div>
     </div>
   );
 };

@@ -7,8 +7,8 @@
   border: 1px solid var(--card-border);
   border-radius: 1rem;
   background: var(--caption-bg);
-  padding: 0.8rem 0.9rem 1rem;
-  overflow: hidden;
+  padding: 1.5rem;
+  overflow-y: auto;
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
 }
 
@@ -17,32 +17,35 @@
   flex-direction: column;
   justify-content: center;
   gap: 0.35rem;
-  min-height: 14.5rem;
-  height: calc(100% - 4.5rem);
+  min-height: 100%;
   max-width: 34ch;
   margin: 0 auto;
-  padding-top: 0.7rem;
-  padding-bottom: 0.5rem;
-  overflow-y: auto;
+  padding-top: 4rem;
+  padding-bottom: 1.25rem;
+  padding-right: 0.7rem;
 }
 
 .controlDock {
   position: sticky;
   top: 0;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  gap: 0.35rem;
-  margin-left: 0;
+  gap: 0.5rem;
   z-index: 3;
   width: 100%;
+}
+
+.controlDockLeft {
+  display: inline-flex;
+  align-items: center;
 }
 
 .controlDockRight {
   display: inline-flex;
   align-items: center;
-  justify-content: flex-end;
   gap: 0.35rem;
+  margin-left: auto;
 }
 
 .speedControl {
@@ -149,7 +152,7 @@
 }
 
 .practicedHint {
-  margin: 0.35rem 0 0;
+  margin: 0;
   font-size: 0.75rem;
   color: var(--muted-text);
   background: color-mix(in srgb, var(--caption-bg) 80%, transparent);
@@ -190,38 +193,53 @@
   opacity: 0.7;
 }
 
-@media (min-width: 768px) {
-  .captionPanel {
-    padding: 1.2rem 1.2rem 1.1rem;
-  }
-
-  .captionTrack {
-    min-height: 100%;
-    height: calc(100% - 3.75rem);
-    padding-top: 0.9rem;
-    padding-bottom: 0.6rem;
-  }
-
-  .captionLine {
-    font-size: 1.25rem;
-  }
+.practicedDock {
+  position: sticky;
+  bottom: 0;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.35rem;
+  margin-left: auto;
+  width: fit-content;
 }
 
 @media (max-width: 767px) {
   .captionPanel {
-    min-height: 12.5rem;
+    min-height: 11.75rem;
     border-radius: 0.75rem;
+    padding: 0.8rem;
+    overflow: hidden;
   }
 
   .captionTrack {
     min-height: 7.25rem;
     height: auto;
-    max-height: 8.5rem;
+    max-height: 8rem;
+    max-width: 32ch;
+    padding-top: 3rem;
+    padding-bottom: 2.7rem;
+    padding-right: 0;
     overflow: hidden;
+  }
+
+  .controlDock {
+    top: 0;
+  }
+
+  .practicedDock {
+    bottom: 0;
   }
 
   .captionLine {
     font-size: 1.02rem;
     line-height: 1.23;
+  }
+}
+
+@media (min-width: 768px) {
+  .captionLine {
+    font-size: 1.25rem;
   }
 }
