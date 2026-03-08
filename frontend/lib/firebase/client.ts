@@ -1,5 +1,12 @@
 import { FirebaseApp, getApp, getApps, initializeApp } from 'firebase/app';
-import { Auth, getAuth } from 'firebase/auth';
+import {
+  Auth,
+  browserLocalPersistence,
+  browserSessionPersistence,
+  getAuth,
+  indexedDBLocalPersistence,
+  initializeAuth,
+} from 'firebase/auth';
 
 type FirebaseConfig = {
   apiKey: string;
@@ -70,7 +77,19 @@ export const getFirebaseAuth = (): Auth | null => {
     return null;
   }
 
-  authInstance = getAuth(app);
+  try {
+    authInstance = initializeAuth(app, {
+      persistence: [indexedDBLocalPersistence, browserLocalPersistence, browserSessionPersistence],
+    });
+  } catch (error) {
+    // If auth was already initialized elsewhere (or environment limits persistence),
+    // fall back to the default singleton to avoid breaking login flows.
+    authInstance = getAuth(app);
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn('Falling back to getAuth()', error);
+    }
+  }
+
   return authInstance;
 };
 
