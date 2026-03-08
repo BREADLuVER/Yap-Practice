@@ -13,6 +13,7 @@ type FirebaseConfig = {
 
 let appInstance: FirebaseApp | null = null;
 let authInstance: Auth | null = null;
+let initError: Error | null = null;
 
 const getFirebaseConfig = (): FirebaseConfig => {
   const config: FirebaseConfig = {
@@ -41,20 +42,36 @@ const getFirebaseConfig = (): FirebaseConfig => {
   return config;
 };
 
-const getFirebaseApp = (): FirebaseApp => {
+const getFirebaseApp = (): FirebaseApp | null => {
   if (appInstance) {
     return appInstance;
   }
+  if (initError) {
+    return null;
+  }
 
-  appInstance = getApps().length > 0 ? getApp() : initializeApp(getFirebaseConfig());
-  return appInstance;
+  try {
+    appInstance = getApps().length > 0 ? getApp() : initializeApp(getFirebaseConfig());
+    return appInstance;
+  } catch (error) {
+    initError = error instanceof Error ? error : new Error('Failed to initialize Firebase app.');
+    console.error(initError);
+    return null;
+  }
 };
 
-export const getFirebaseAuth = (): Auth => {
+export const getFirebaseAuth = (): Auth | null => {
   if (authInstance) {
     return authInstance;
   }
 
-  authInstance = getAuth(getFirebaseApp());
+  const app = getFirebaseApp();
+  if (!app) {
+    return null;
+  }
+
+  authInstance = getAuth(app);
   return authInstance;
 };
+
+export const getFirebaseInitError = (): Error | null => initError;
