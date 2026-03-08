@@ -6,6 +6,7 @@ from typing import Any
 import yt_dlp
 
 from ingest_core import (
+    TranscriptQualityFilter,
     build_base_ydl_opts,
     extract_video_metadata,
     parse_upload_date,
@@ -124,6 +125,15 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Select clips and print actions without transcribing or uploading.",
     )
+    parser.add_argument(
+        "--min-speech-ratio",
+        type=float,
+        default=0.0,
+        help=(
+            "Skip clips whose spoken-word timestamp coverage is below this ratio "
+            "(0.0 to 1.0). 0 disables."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -137,6 +147,12 @@ def main() -> None:
         raise ValueError("--max-new must be greater than 0.")
     if args.per_channel_fetch <= 0:
         raise ValueError("--per-channel-fetch must be greater than 0.")
+    if args.min_speech_ratio < 0 or args.min_speech_ratio > 1:
+        raise ValueError("--min-speech-ratio must be between 0 and 1.")
+
+    quality_filter = TranscriptQualityFilter(
+        min_speech_ratio=args.min_speech_ratio,
+    )
 
     all_candidates: list[ClipCandidate] = []
     for channel_url in channels:
@@ -149,6 +165,7 @@ def main() -> None:
     ranked_candidates = sorted(deduped_candidates, key=lambda c: c.view_count, reverse=True)
 
     skipped_existing = 0
+    skipped_filter = 0
     ingested = 0
     failures = 0
 
@@ -182,9 +199,16 @@ def main() -> None:
                     "title": candidate.title,
                 },
                 skip_if_exists=True,
+                filter_settings=quality_filter,
             )
             if result.get("status") == "ingested":
                 ingested += 1
+            elif result.get("status") == "skipped_filter":
+                skipped_filter += 1
+                print(
+                    f"Filtered out: {candidate.video_id} reason={result.get('reason')} "
+                    f"metrics={result.get('metrics')}"
+                )
         except Exception as error:
             failures += 1
             print(f"Failed ingest for {candidate.video_id}: {error}")
@@ -194,6 +218,7 @@ def main() -> None:
     print(f"- candidates: {len(all_candidates)}")
     print(f"- unique_candidates: {len(deduped_candidates)}")
     print(f"- skipped_existing: {skipped_existing}")
+    print(f"- skipped_filter: {skipped_filter}")
     print(f"- selected_or_ingested: {ingested}")
     print(f"- failures: {failures}")
     if args.dry_run:

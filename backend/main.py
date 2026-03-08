@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -10,9 +11,11 @@ app = FastAPI()
 
 # Initialize Firebase
 # Use service account if available locally, otherwise default credentials (Cloud Run)
-service_account_path = "serviceAccountKey.json"
-if os.path.exists(service_account_path):
-    cred = credentials.Certificate(service_account_path)
+backend_dir = Path(__file__).resolve().parent
+repo_root = backend_dir.parent
+service_account_path = repo_root / "serviceAccountKey.json"
+if service_account_path.exists():
+    cred = credentials.Certificate(str(service_account_path))
     firebase_admin.initialize_app(cred)
 else:
     firebase_admin.initialize_app()

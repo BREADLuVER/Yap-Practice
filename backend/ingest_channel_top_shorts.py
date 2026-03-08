@@ -11,7 +11,12 @@ from urllib.request import Request, urlopen
 
 from firebase_admin import firestore
 
-from ingest_core import get_firestore_client, process_video_url, video_exists
+from ingest_core import (
+    TranscriptQualityFilter,
+    get_firestore_client,
+    process_video_url,
+    video_exists,
+)
 
 YOUTUBE_API_BASE = "https://www.googleapis.com/youtube/v3"
 DEFAULT_CHANNEL_URL = "https://www.youtube.com/@TheLibraryofLetourneau/shorts"
@@ -332,6 +337,15 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="In dry-run mode, check Firestore for already ingested video IDs.",
     )
+    parser.add_argument(
+        "--min-speech-ratio",
+        type=float,
+        default=0.0,
+        help=(
+            "Skip clips whose spoken-word timestamp coverage is below this ratio "
+            "(0.0 to 1.0). 0 disables."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -347,6 +361,12 @@ def main() -> None:
         raise ValueError("--duration-max must be greater than 0.")
     if args.max_new <= 0:
         raise ValueError("--max-new must be greater than 0.")
+    if args.min_speech_ratio < 0 or args.min_speech_ratio > 1:
+        raise ValueError("--min-speech-ratio must be between 0 and 1.")
+
+    quality_filter = TranscriptQualityFilter(
+        min_speech_ratio=args.min_speech_ratio,
+    )
 
     channel_id = _resolve_channel_id(api_key, args.channel_url)
     uploads_playlist_id, channel_title = _get_uploads_playlist_id(api_key, channel_id)
@@ -370,6 +390,7 @@ def main() -> None:
 
     selected = 0
     skipped_existing = 0
+    skipped_filter = 0
     failures = 0
     for entry in ranked:
         if selected >= args.max_new:
@@ -402,9 +423,16 @@ def main() -> None:
                     "title": entry.title,
                 },
                 skip_if_exists=True,
+                filter_settings=quality_filter,
             )
             if result.get("status") == "ingested":
                 selected += 1
+            elif result.get("status") == "skipped_filter":
+                skipped_filter += 1
+                print(
+                    f"Filtered out: {entry.video_id} reason={result.get('reason')} "
+                    f"metrics={result.get('metrics')}"
+                )
         except Exception as error:
             failures += 1
             print(f"Failed ingest for {entry.video_id}: {error}")
@@ -414,6 +442,7 @@ def main() -> None:
     print(f"- uploads_scanned: {len(video_ids)}")
     print(f"- shorts_ranked: {len(ranked)}")
     print(f"- skipped_existing: {skipped_existing}")
+    print(f"- skipped_filter: {skipped_filter}")
     print(f"- selected_or_ingested: {selected}")
     print(f"- failures: {failures}")
     if args.dry_run:
