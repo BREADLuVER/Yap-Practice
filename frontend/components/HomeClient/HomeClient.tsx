@@ -17,6 +17,8 @@ import styles from './HomeClient.module.css';
 const API_BASE_URL = getApiBaseUrl();
 const getYouTubeThumbnailUrl = (videoId: string) => `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
 type PracticedFilter = 'all' | 'practiced' | 'unpracticed';
+const INITIAL_VISIBLE_VIDEOS = 48;
+const LOAD_MORE_STEP = 48;
 
 const getNormalizedThumbnailUrl = (video: VideoSummary) => {
   if (!video.thumbnailUrl) {
@@ -41,6 +43,7 @@ export default function HomeClient() {
   const [updatingVideoIds, setUpdatingVideoIds] = useState<Set<string>>(new Set());
   const [fallbackThumbnailVideoIds, setFallbackThumbnailVideoIds] = useState<Set<string>>(new Set());
   const [activeFilter, setActiveFilter] = useState<PracticedFilter>('all');
+  const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_VIDEOS);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -111,6 +114,22 @@ export default function HomeClient() {
     });
   }, [activeFilter, practicedVideoIds, videos]);
 
+  const visibleVideos = useMemo(
+    () => filteredVideos.slice(0, visibleCount),
+    [filteredVideos, visibleCount],
+  );
+
+  const canLoadMore = visibleCount < filteredVideos.length;
+
+  const handleFilterChange = (nextFilter: PracticedFilter) => {
+    setActiveFilter(nextFilter);
+    setVisibleCount(INITIAL_VISIBLE_VIDEOS);
+  };
+
+  const handleLoadMore = () => {
+    setVisibleCount((previous) => previous + LOAD_MORE_STEP);
+  };
+
   const handlePracticedToggle = async (videoId: string) => {
     if (!user || updatingVideoIds.has(videoId)) {
       return;
@@ -166,7 +185,7 @@ export default function HomeClient() {
             type="button"
             className={`${styles.filterButton} ${activeFilter === 'all' ? styles.filterButtonActive : ''}`}
             aria-pressed={activeFilter === 'all'}
-            onClick={() => setActiveFilter('all')}
+            onClick={() => handleFilterChange('all')}
           >
             All
           </button>
@@ -174,7 +193,7 @@ export default function HomeClient() {
             type="button"
             className={`${styles.filterButton} ${activeFilter === 'practiced' ? styles.filterButtonActive : ''}`}
             aria-pressed={activeFilter === 'practiced'}
-            onClick={() => setActiveFilter('practiced')}
+            onClick={() => handleFilterChange('practiced')}
           >
             Practiced
           </button>
@@ -182,7 +201,7 @@ export default function HomeClient() {
             type="button"
             className={`${styles.filterButton} ${activeFilter === 'unpracticed' ? styles.filterButtonActive : ''}`}
             aria-pressed={activeFilter === 'unpracticed'}
-            onClick={() => setActiveFilter('unpracticed')}
+            onClick={() => handleFilterChange('unpracticed')}
           >
             Unpracticed
           </button>
@@ -203,7 +222,7 @@ export default function HomeClient() {
         <div className={styles.loading}>Loading library...</div>
       ) : (
         <div className={styles.videoGrid}>
-          {filteredVideos.map((video) => (
+          {visibleVideos.map((video) => (
             <article key={video.video_id} className={styles.videoCard}>
               <div className={styles.thumbnailWrapper}>
                 <button
@@ -267,6 +286,18 @@ export default function HomeClient() {
                 : 'No clips match the selected filter yet.'}
             </div>
           )}
+        </div>
+      )}
+      {!isLoading && !error && canLoadMore && (
+        <div className={styles.filterRow}>
+          <button
+            type="button"
+            className={styles.filterButton}
+            onClick={handleLoadMore}
+            aria-label="Load more clips"
+          >
+            Load more ({Math.min(LOAD_MORE_STEP, filteredVideos.length - visibleCount)})
+          </button>
         </div>
       )}
     </main>
