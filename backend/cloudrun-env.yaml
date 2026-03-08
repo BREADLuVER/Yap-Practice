@@ -1,0 +1,2 @@
+ALLOWED_ORIGINS: "http://localhost:3000,https://yap-practice.vercel.app"
+ALLOWED_ORIGIN_REGEX: '^https://yap-practice-[a-z0-9-]+-breadluvers-projects[.]vercel[.]app$'

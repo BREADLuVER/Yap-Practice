@@ -52,6 +52,7 @@
 @media (max-width: 767px) {
   .page {
     padding: 0.9rem;
+    padding-top: calc(env(safe-area-inset-top, 0px) + 4.25rem);
     gap: 1rem;
   }
 

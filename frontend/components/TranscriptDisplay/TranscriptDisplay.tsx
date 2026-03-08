@@ -41,6 +41,24 @@ const isSoftPunctuation = (word: string): boolean => /[,;:]["']?$/.test(word.tri
 const estimateLineChars = (lineWords: Word[]): number =>
   lineWords.reduce((acc, lineWord) => acc + lineWord.word.trim().length + 1, 0);
 
+const getActiveLineIndex = (lines: TranscriptLine[], time: number): number => {
+  if (!lines.length) {
+    return -1;
+  }
+
+  const exactMatchIndex = lines.findIndex((line) => time >= line.start && time <= line.end);
+  if (exactMatchIndex >= 0) {
+    return exactMatchIndex;
+  }
+
+  const nextLineIndex = lines.findIndex((line) => time < line.start);
+  if (nextLineIndex === -1) {
+    return lines.length - 1;
+  }
+
+  return Math.max(0, nextLineIndex - 1);
+};
+
 const toTranscriptLines = (words: Word[]): TranscriptLine[] => {
   if (!words.length) {
     return [];
@@ -154,10 +172,7 @@ const TranscriptDisplay: React.FC<TranscriptDisplayProps> = ({
   }, []);
 
   const activeLineIndex = useMemo(
-    () =>
-      transcriptLines.findIndex(
-        (line) => currentTime >= line.start && currentTime <= line.end,
-      ),
+    () => getActiveLineIndex(transcriptLines, currentTime),
     [currentTime, transcriptLines],
   );
 

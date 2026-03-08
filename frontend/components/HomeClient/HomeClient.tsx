@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import axios from 'axios';
 import Link from 'next/link';
 import Image from 'next/image';
 import { VideoSummary } from '@/types';
@@ -17,8 +16,8 @@ import styles from './HomeClient.module.css';
 const API_BASE_URL = getApiBaseUrl();
 const getYouTubeThumbnailUrl = (videoId: string) => `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
 type PracticedFilter = 'all' | 'practiced' | 'unpracticed';
-const INITIAL_VISIBLE_VIDEOS = 48;
-const LOAD_MORE_STEP = 48;
+const INITIAL_VISIBLE_VIDEOS = 12;
+const LOAD_MORE_STEP = 24;
 
 const getNormalizedThumbnailUrl = (video: VideoSummary) => {
   if (!video.thumbnailUrl) {
@@ -36,36 +35,62 @@ const getNormalizedThumbnailUrl = (video: VideoSummary) => {
   }
 };
 
-export default function HomeClient() {
+interface HomeClientProps {
+  initialVideos?: VideoSummary[];
+  initialError?: string | null;
+}
+
+export default function HomeClient({
+  initialVideos = [],
+  initialError = null,
+}: HomeClientProps) {
   const { user, isLoading: isAuthLoading } = useAuthUser();
-  const [videos, setVideos] = useState<VideoSummary[]>([]);
+  const [videos, setVideos] = useState<VideoSummary[]>(initialVideos);
   const [practicedVideoIds, setPracticedVideoIds] = useState<Set<string>>(new Set());
   const [updatingVideoIds, setUpdatingVideoIds] = useState<Set<string>>(new Set());
   const [fallbackThumbnailVideoIds, setFallbackThumbnailVideoIds] = useState<Set<string>>(new Set());
   const [activeFilter, setActiveFilter] = useState<PracticedFilter>('all');
   const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_VIDEOS);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(initialVideos.length === 0 && !initialError);
+  const [error, setError] = useState<string | null>(initialError);
 
   useEffect(() => {
+    if (initialVideos.length > 0 || initialError) {
+      return;
+    }
+
+    let isCancelled = false;
     const fetchVideos = async () => {
       try {
-        const response = await axios.get(`${API_BASE_URL}/api/videos`);
-        setVideos(response.data);
+        const response = await fetch(`${API_BASE_URL}/api/videos`, {
+          cache: 'no-store',
+        });
+        if (!response.ok) {
+          throw new Error(`Failed to load videos: ${response.status}`);
+        }
+
+        const nextVideos = (await response.json()) as VideoSummary[];
+        if (!isCancelled) {
+          setVideos(nextVideos);
+        }
       } catch (err: unknown) {
         console.error(err);
-        if (axios.isAxiosError(err) && err.message === 'Network Error') {
+        if (!isCancelled) {
           setError(getApiErrorMessage('Unable to reach the API server. Confirm backend URL and CORS settings.'));
-        } else {
-          setError('Failed to load videos. Please try again later.');
         }
       } finally {
-        setIsLoading(false);
+        if (!isCancelled) {
+          setIsLoading(false);
+        }
       }
     };
 
     fetchVideos();
-  }, []);
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [initialError, initialVideos.length]);
 
   useEffect(() => {
     let isCancelled = false;
@@ -222,7 +247,7 @@ export default function HomeClient() {
         <div className={styles.loading}>Loading library...</div>
       ) : (
         <div className={styles.videoGrid}>
-          {visibleVideos.map((video) => (
+          {visibleVideos.map((video, index) => (
             <article key={video.video_id} className={styles.videoCard}>
               <div className={styles.thumbnailWrapper}>
                 <button
@@ -252,6 +277,7 @@ export default function HomeClient() {
                     }
                     alt={video.title}
                     fill
+                    priority={index < 2}
                     sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                     className={styles.thumbnail}
                     onError={() => {

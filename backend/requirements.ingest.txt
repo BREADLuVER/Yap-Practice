@@ -1,0 +1,6 @@
+-r requirements.txt
+yt-dlp
+openai-whisper
+ffmpeg-python
+torch
+numpy

@@ -4,8 +4,17 @@ const normalizeOrigin = (origin: string): string => origin.trim().replace(/\/$/,
 
 const isLocalHost = (hostname: string): boolean => hostname === 'localhost' || hostname === '127.0.0.1';
 
+const getConfiguredOrigin = (): string => {
+  const serverSideOrigin = process.env.API_BASE_URL?.trim();
+  if (serverSideOrigin) {
+    return serverSideOrigin;
+  }
+
+  return process.env.NEXT_PUBLIC_API_BASE_URL?.trim() ?? '';
+};
+
 export const getApiBaseUrl = (): string => {
-  const configuredOrigin = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
+  const configuredOrigin = getConfiguredOrigin();
 
   if (configuredOrigin) {
     const normalizedOrigin = normalizeOrigin(configuredOrigin);
@@ -26,6 +35,19 @@ export const getApiBaseUrl = (): string => {
   }
 
   if (typeof window !== 'undefined' && isLocalHost(window.location.hostname)) {
+    return LOCAL_API_ORIGIN;
+  }
+
+  return '';
+};
+
+export const getServerApiBaseUrl = (): string => {
+  const configuredOrigin = getConfiguredOrigin();
+  if (configuredOrigin) {
+    return normalizeOrigin(configuredOrigin);
+  }
+
+  if (process.env.NODE_ENV !== 'production') {
     return LOCAL_API_ORIGIN;
   }
 

@@ -239,7 +239,27 @@
 }
 
 @media (min-width: 768px) {
+  .captionPanel {
+    height: clamp(16rem, 42vh, 24rem);
+    max-height: min(24rem, 42vh);
+  }
+
+  .captionTrack {
+    min-height: calc(100% - 3rem);
+  }
+
   .captionLine {
     font-size: 1.25rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .captionPanel {
+    height: 100%;
+    max-height: none;
+  }
+
+  .captionTrack {
+    min-height: 100%;
   }
 }
