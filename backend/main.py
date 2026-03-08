@@ -6,8 +6,6 @@ from urllib.parse import parse_qs, urlparse
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-import yt_dlp
-import whisper
 import uvicorn
 import firebase_admin
 from firebase_admin import auth, credentials, firestore
@@ -54,6 +52,8 @@ model = None
 def get_model():
     global model
     if model is None:
+        import whisper
+
         print("Loading Whisper model...")
         model = whisper.load_model("base") # Use base model for speed
     return model
@@ -286,6 +286,8 @@ async def process_video(request: VideoRequest):
     print(f"Processing URL: {url}")
 
     try:
+        import yt_dlp
+
         # Fast path: if we can parse video id directly, check cache first
         parsed_video_id = extract_video_id_from_url(url)
         if parsed_video_id:

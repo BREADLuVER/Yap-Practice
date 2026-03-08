@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import styles from './TranscriptDisplay.module.css';
 
 interface Word {
@@ -133,6 +133,25 @@ const TranscriptDisplay: React.FC<TranscriptDisplayProps> = ({
   const activeLineRef = useRef<HTMLParagraphElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const transcriptLines = useMemo(() => toTranscriptLines(words), [words]);
+  const [isCompactMobile, setIsCompactMobile] = useState(() =>
+    typeof window !== 'undefined' ? window.matchMedia('(max-width: 767px)').matches : false,
+  );
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const media = window.matchMedia('(max-width: 767px)');
+    const handleMediaChange = (event: MediaQueryListEvent) => {
+      setIsCompactMobile(event.matches);
+    };
+
+    media.addEventListener('change', handleMediaChange);
+    return () => {
+      media.removeEventListener('change', handleMediaChange);
+    };
+  }, []);
 
   const activeLineIndex = useMemo(
     () =>
@@ -143,6 +162,10 @@ const TranscriptDisplay: React.FC<TranscriptDisplayProps> = ({
   );
 
   useEffect(() => {
+    if (isCompactMobile) {
+      return;
+    }
+
     if (!activeLineRef.current || !containerRef.current) {
       return;
     }
@@ -151,7 +174,30 @@ const TranscriptDisplay: React.FC<TranscriptDisplayProps> = ({
       behavior: 'smooth',
       block: 'center',
     });
-  }, [activeLineIndex]);
+  }, [activeLineIndex, isCompactMobile]);
+
+  const renderedLines = useMemo(() => {
+    if (!isCompactMobile) {
+      return transcriptLines.map((line, index) => ({ line, index }));
+    }
+
+    if (transcriptLines.length === 0) {
+      return [];
+    }
+
+    if (activeLineIndex < 0) {
+      return transcriptLines.slice(0, 3).map((line, index) => ({ line, index }));
+    }
+
+    const startIndex = Math.max(0, activeLineIndex - 1);
+    const endIndex = Math.min(transcriptLines.length - 1, activeLineIndex + 1);
+    const visible: Array<{ line: TranscriptLine; index: number }> = [];
+
+    for (let index = startIndex; index <= endIndex; index += 1) {
+      visible.push({ line: transcriptLines[index], index });
+    }
+    return visible;
+  }, [activeLineIndex, isCompactMobile, transcriptLines]);
 
   return (
     <div
@@ -161,29 +207,6 @@ const TranscriptDisplay: React.FC<TranscriptDisplayProps> = ({
       aria-label="Timed transcript"
     >
       <div className={styles.controlDock}>
-        <div className={styles.speedControl} aria-label="Playback speed control">
-          {SPEED_OPTIONS.map((speed) => {
-            const isActiveSpeed = playbackRate === speed;
-            const speedButtonClassName = [
-              styles.speedButton,
-              isActiveSpeed ? styles.speedButtonActive : '',
-            ]
-              .filter(Boolean)
-              .join(' ');
-
-            return (
-              <button
-                key={speed}
-                type="button"
-                className={speedButtonClassName}
-                aria-pressed={isActiveSpeed}
-                onClick={() => onPlaybackRateChange(speed)}
-              >
-                {speed}x
-              </button>
-            );
-          })}
-        </div>
         <button
           type="button"
           className={styles.playPauseButton}
@@ -192,9 +215,48 @@ const TranscriptDisplay: React.FC<TranscriptDisplayProps> = ({
         >
           {isPlaying ? 'Pause' : 'Play'}
         </button>
+        <div className={styles.controlDockRight}>
+          <button
+            type="button"
+            className={`${styles.practicedButton} ${isPracticed ? styles.practicedButtonActive : ''}`}
+            aria-pressed={isPracticed}
+            aria-label={
+              isPracticed
+                ? 'Marked as practiced. Click to unmark.'
+                : 'Mark this clip as practiced.'
+            }
+            onClick={onPracticedToggle}
+            disabled={isPracticedDisabled || isPracticedUpdating}
+          >
+            {isPracticedUpdating ? '...' : '✓'}
+          </button>
+          <div className={styles.speedControl} aria-label="Playback speed control">
+            {SPEED_OPTIONS.map((speed) => {
+              const isActiveSpeed = playbackRate === speed;
+              const speedButtonClassName = [
+                styles.speedButton,
+                isActiveSpeed ? styles.speedButtonActive : '',
+              ]
+                .filter(Boolean)
+                .join(' ');
+
+              return (
+                <button
+                  key={speed}
+                  type="button"
+                  className={speedButtonClassName}
+                  aria-pressed={isActiveSpeed}
+                  onClick={() => onPlaybackRateChange(speed)}
+                >
+                  {speed}x
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </div>
       <div className={styles.captionTrack}>
-        {transcriptLines.map((line, lineIndex) => {
+        {renderedLines.map(({ line, index: lineIndex }) => {
           const isActiveLine = lineIndex === activeLineIndex;
           const hasActiveLine = activeLineIndex >= 0;
           const lineDistance = hasActiveLine
@@ -243,23 +305,7 @@ const TranscriptDisplay: React.FC<TranscriptDisplayProps> = ({
           );
         })}
       </div>
-      <div className={styles.practicedDock}>
-        {practicedHint ? <p className={styles.practicedHint}>{practicedHint}</p> : null}
-        <button
-          type="button"
-          className={`${styles.practicedButton} ${isPracticed ? styles.practicedButtonActive : ''}`}
-          aria-pressed={isPracticed}
-          aria-label={
-            isPracticed
-              ? 'Marked as practiced. Click to unmark.'
-              : 'Mark this clip as practiced.'
-          }
-          onClick={onPracticedToggle}
-          disabled={isPracticedDisabled || isPracticedUpdating}
-        >
-          {isPracticedUpdating ? '...' : '✓'}
-        </button>
-      </div>
+      {practicedHint ? <p className={styles.practicedHint}>{practicedHint}</p> : null}
     </div>
   );
 };

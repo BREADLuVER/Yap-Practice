@@ -49,6 +49,32 @@
   font-size: 1.1rem;
 }
 
+@media (max-width: 767px) {
+  .page {
+    padding: 0.9rem;
+    gap: 1rem;
+  }
+
+  .header {
+    gap: 0.5rem;
+  }
+
+  .videoTitle {
+    font-size: 1rem;
+    line-height: 1.25;
+  }
+
+  .playerSection {
+    gap: 0.9rem;
+  }
+
+  .loading,
+  .errorBanner {
+    padding: 1rem;
+    font-size: 0.95rem;
+  }
+}
+
 .errorBanner {
   color: var(--error-text);
   background-color: var(--error-bg);
