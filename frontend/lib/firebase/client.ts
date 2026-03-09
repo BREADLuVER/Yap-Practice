@@ -1,6 +1,7 @@
 import { FirebaseApp, getApp, getApps, initializeApp } from 'firebase/app';
 import {
   Auth,
+  browserPopupRedirectResolver,
   browserLocalPersistence,
   browserSessionPersistence,
   getAuth,
@@ -68,6 +69,10 @@ const getFirebaseApp = (): FirebaseApp | null => {
 };
 
 export const getFirebaseAuth = (): Auth | null => {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
   if (authInstance) {
     return authInstance;
   }
@@ -80,6 +85,7 @@ export const getFirebaseAuth = (): Auth | null => {
   try {
     authInstance = initializeAuth(app, {
       persistence: [indexedDBLocalPersistence, browserLocalPersistence, browserSessionPersistence],
+      popupRedirectResolver: browserPopupRedirectResolver,
     });
   } catch (error) {
     // If auth was already initialized elsewhere (or environment limits persistence),
