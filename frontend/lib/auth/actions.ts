@@ -27,19 +27,6 @@ const getRequiredAuth = () => {
   throw new Error('Firebase Auth is unavailable.');
 };
 
-const shouldUseRedirectFlow = (): boolean => {
-  if (typeof navigator === 'undefined') {
-    return false;
-  }
-
-  const userAgent = navigator.userAgent;
-  const isClassicIos = /iPhone|iPad|iPod/i.test(userAgent);
-  // iPadOS can identify itself as Macintosh while still requiring iOS-safe auth flow.
-  const isTouchMac = /Macintosh/i.test(userAgent) && navigator.maxTouchPoints > 1;
-
-  return isClassicIos || isTouchMac;
-};
-
 const shouldFallbackToRedirect = (error: unknown): boolean => {
   if (!(error instanceof FirebaseError)) {
     return false;
@@ -54,11 +41,6 @@ const shouldFallbackToRedirect = (error: unknown): boolean => {
 
 export const signInWithGoogle = async (): Promise<void> => {
   const auth = getRequiredAuth();
-  if (shouldUseRedirectFlow()) {
-    await signInWithRedirect(auth, googleProvider);
-    return;
-  }
-
   try {
     await signInWithPopup(auth, googleProvider);
   } catch (error) {
